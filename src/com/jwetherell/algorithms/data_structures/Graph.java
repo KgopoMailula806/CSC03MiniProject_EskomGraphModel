@@ -6,6 +6,8 @@ import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 
+import EskomClasses.EskomInfrastructureEntity;
+
 /**
  * Graph. Could be directed or undirected depending on the TYPE enum. A graph is
  * an abstract representation of a set of objects where some pairs of the
@@ -326,6 +328,8 @@ public class Graph<T extends Comparable<T>> {
                 builder.append("\t").append(e.toString());
             return builder.toString();
         }
+
+		
     }
 
     public static class Edge<T extends Comparable<T>> implements Comparable<Edge<T>> {
@@ -347,7 +351,11 @@ public class Graph<T extends Comparable<T>> {
             this(e.cost, e.from, e.to);
         }
 
-        public int getCost() {
+        public Edge() {
+        	 
+		}
+
+		public int getCost() {
             return cost;
         }
 
@@ -355,6 +363,14 @@ public class Graph<T extends Comparable<T>> {
             this.cost = cost;
         }
 
+        public void setFrom(Object from2) {
+        	this.from = (Vertex<T>) from2;
+        }
+        
+        public void setTo(Object to2) {
+        	this.to = (Vertex<T>) to2;
+        }
+        
         public Vertex<T> getFromVertex() {
             return from;
         }
@@ -392,7 +408,8 @@ public class Graph<T extends Comparable<T>> {
 
             final boolean to = this.to.equals(e.to);
             if (!to)
-                return false;
+           
+            	return false;
 
             return true;
         }
@@ -424,8 +441,8 @@ public class Graph<T extends Comparable<T>> {
         @Override
         public String toString() {
             StringBuilder builder = new StringBuilder();
-            builder.append("[ ").append(from.value).append("(").append(from.weight).append(") ").append("]").append(" -> ")
-                   .append("[ ").append(to.value).append("(").append(to.weight).append(") ").append("]").append(" = ").append(cost).append("\n");
+            builder.append("[ ").append(from.value).append("(").append(from.weight).append(") ").append("]" + ((EskomInfrastructureEntity<T>)from).getInfrastructureName()).append(" -> ")
+                   .append(((EskomInfrastructureEntity<T>)to).getInfrastructureName()+"[ ").append(to.value).append("(").append(to.weight).append(") ").append("]").append(" = ").append(cost).append("\n");
             return builder.toString();
         }
     }
