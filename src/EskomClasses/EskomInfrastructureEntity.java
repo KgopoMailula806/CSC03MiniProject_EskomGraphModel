@@ -12,6 +12,14 @@ public class EskomInfrastructureEntity<T extends Comparable<T>> extends Graph.Ve
 	protected String InfracstructureName;
 	public int Index; 
 	
+	public int getIndex() {
+		return Index;
+	}
+
+	public void setIndex(int index) {
+		Index = index;
+	}
+
 	/**
 	 * 
 	 * @param value
@@ -23,7 +31,7 @@ public class EskomInfrastructureEntity<T extends Comparable<T>> extends Graph.Ve
 	}	
 		
 	/**
-	 * 	constructor to initialise the value and weight of the 
+	 * 	constructor to  the value and weight of the 
 	 * @param value
 	 * @param weight
 	 */

@@ -13,14 +13,13 @@ import javafx.scene.control.Label;
 import javafx.scene.control.Separator;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
-import javafx.scene.control.TitledPane;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.text.Font;
-import javafx.scene.Node;
-import javafx.scene.control.Accordion;
+import javafx.scene.Parent;
+import javafx.scene.canvas.Canvas;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Alert.AlertType;
 import javafx.scene.control.Button;
@@ -54,6 +53,15 @@ public class DisplayPane extends StackPane{
 	
 	private VBox componentVBox;
 	private TextArea textArea;
+	private ArrayList<String> pathVertices = new ArrayList<String>(); 
+	private Canvas GraphPlane = new Canvas();
+	private boolean alreadyaddedForPathFinding = false;
+	private boolean alreadyaddedForConnecting = false;
+	private ChoiceBox<String> verticesToRemove = new ChoiceBox<String>();
+	private VBox connectFacility = new VBox(10);
+	private Button establishLinkVertexBTN = new Button("Nodes");
+	private VBox tepBox = new VBox(10);
+	private Button findBTN = new Button("Get nodes");
 	/**
 	 * 
 	 */	
@@ -86,9 +94,10 @@ public class DisplayPane extends StackPane{
 		this.facilityTypelbl = new Label("Facility Type");
 		this.facilityTypeCHBox = new ChoiceBox<String>();
 		//set choices 
-		facilityTypeCHBox.getItems().add("Sub station");
-		facilityTypeCHBox.getItems().add("zone Distribution main");
-		facilityTypeCHBox.getItems().add("street Distribution main");
+		facilityTypeCHBox.getItems().add("SUBSTATION");
+		facilityTypeCHBox.getItems().add("ZONE DISTRIBUTION MAIN");
+		facilityTypeCHBox.getItems().add("STREET DISTRIBUTION MAIN");
+		facilityTypeCHBox.getItems().add("HQ");
 		facilityTypeCHBox.getSelectionModel().select(0);
 			
 		Separator addDivisionSep = new Separator(Orientation.HORIZONTAL);
@@ -100,15 +109,61 @@ public class DisplayPane extends StackPane{
 		this.gridDisplay.setPrefSize(hight, width);
 		textArea = new TextArea();
 		
+		AddVertexBTN.setOnAction(e ->{
+			//make the vertex 
+			String stationType = facilityTypeCHBox.getValue();
+			String StationName = facilityNameTXTFld.getText();
+			String testText = stationCapacityTXTFld.getText();					
+			
+			try//value
+			{
+				stationCapacity = Double.parseDouble(testText);
+				//Create a EskomInfrastructureEntity : vertex<Double>
+				EskomInfrastructureEntity<Double> infrastructure = new EskomInfrastructureEntity<>(StationName,stationType,stationCapacity);
+				//Insert into the Graph
+				GraphInteractions.insertNewInfratructure(infrastructure);
 				
-		// Terminating a facility------------------------------------------------------------------------------------------------------------
+				// create a Confirmation alert 		
+		        Alert a = new Alert(AlertType.CONFIRMATION);
+		        a.setContentText("Infrastructure Component recorded");
+		        a.show();
+		        
+		        verticesToRemove.getItems().add(StationName);
+		        print(verticesToRemove,null);
+		        connectaction(establishLinkVertexBTN,connectFacility);
+				
+			}		
+			catch(Exception exception) 
+			{
+				// create an error alert 
+		        Alert a = new Alert(AlertType.ERROR);
+		        a.setContentText("please enter a number for volatage field");
+		        a.show();
+			}finally {
+				stationCapacity = 0.0;
+			}
+			
+		});
+		
+		
+		//connect components ------------------------------------------------------------------------------------------------------------------
+		Label connectNodesDivisionlbl = new Label("Connect Facilities");
+		connectNodesDivisionlbl.setFont(Font.font ("Verdana", 20));
+		Separator connectNodesDivisionSep = new Separator(Orientation.HORIZONTAL);
+		
+		
+		connectFacility.getChildren().addAll(connectNodesDivisionlbl,establishLinkVertexBTN);
+				
+		connectaction(establishLinkVertexBTN,connectFacility);
+		pathFinding(findBTN,tepBox);
+		
+		
+		// removing a facility------------------------------------------------------------------------------------------------------------
 		Label removeDivisionlbl = new Label("remove Facility (Vertex)");
 		removeDivisionlbl.setFont(Font.font ("Verdana", 20));
 		Separator removeDivisionSep = new Separator(Orientation.HORIZONTAL);
 						
-		//Get the facility (Vertex) 		
-		ChoiceBox<String> verticesToRemove = new ChoiceBox<String>();
-		
+		//Get the facility (Vertex) 						
 		print(verticesToRemove,null);
 				
 		Button removeVertex = new Button("Remove") ;
@@ -133,125 +188,206 @@ public class DisplayPane extends StackPane{
 		});
 		
 		this.removeFacilityHbox = new VBox(10);
-		this.removeFacilityHbox.getChildren().addAll(removeDivisionlbl,removeDivisionSep,verticesToRemove,removeVertex);
+		this.removeFacilityHbox.getChildren().addAll(removeDivisionSep,removeDivisionlbl,verticesToRemove,removeVertex);
 		
-		//connect components ------------------------------------------------------------------------------------------------------------------
-		Label connectNodesDivisionlbl = new Label("Connect Facilities");
-		connectNodesDivisionlbl.setFont(Font.font ("Verdana", 20));
-		Separator connectNodesDivisionSep = new Separator(Orientation.HORIZONTAL);
+		
 		
 		//Path finding------------------------------------------------------------------------------------------------------------------------
 		Label pathFindingDivisionlbl = new Label("Path finding");
 		pathFindingDivisionlbl.setFont(Font.font ("Verdana", 20));
-		VBox tepBox = new VBox(10);
-		Button establishLinkVertexBTN = new Button("Get nodes");
-		tepBox.getChildren().add(establishLinkVertexBTN);
+		
+		tepBox.getChildren().addAll(pathFindingDivisionlbl,findBTN);
 		Separator pathFindingDivisionSep = new Separator(Orientation.HORIZONTAL);
 		
 		componentVBox = new VBox(10);
-		componentVBox.getChildren().addAll(addFacilityHbox,tepBox,removeFacilityHbox);
+		componentVBox.getChildren().addAll(addFacilityHbox,connectFacility,tepBox,removeFacilityHbox);
 		
-		
+		VBox rigthBox = new VBox(10);
 		this.mainHBox.getChildren().addAll(componentVBox,textArea);
-		
-		//Controls						
-		AddVertexBTN.setOnAction(e ->{
-			//make the vertex 
-			String stationType = facilityTypeCHBox.getValue();
-			String StationName = facilityNameTXTFld.getText();
-			String testText = stationCapacityTXTFld.getText();					
-			
-			try//value
-			{
-				stationCapacity = Double.parseDouble(testText);
 				
-			}		
-			catch(Exception exception) 
-			{
-				// create an error alert 
-		        Alert a = new Alert(AlertType.ERROR);
-		        a.setContentText("please enter a number for volatage field");
-		        a.show();
-			}finally {
-				stationCapacity = 0.0;
-			}
-			
-			//Create a EskomInfrastructureEntity : vertex<Double>
-			EskomInfrastructureEntity<Double> infrastructure = new EskomInfrastructureEntity<>(StationName,stationType,stationCapacity);
-			//Insert into the Graph
-			GraphInteractions.insertNewInfratructure(infrastructure);
-			
-			// create a Confirmation alert 		
-	        Alert a = new Alert(AlertType.CONFIRMATION);
-	        a.setContentText("Infrastructure Component recorded");
-	        a.show();
-			
-		});
-				
-		//
-		establishLinkVertexBTN.setOnAction(e -> {
-			
-			HBox choiceBoxes = new HBox(10);
-			ChoiceBox<String> startChoices = new ChoiceBox<>();
-			startChoices.getItems().add("Start");			
-			ChoiceBox<String> goalChoices = new ChoiceBox<>();
-			goalChoices.getItems().add("Goal");
-			
-			//get all the graphs vertices(EskomInfrastructureEntity)
-			List<Vertex<Double>> vertices = GraphInteractions.getGraph().getVertices();
-			
-			ArrayList<Vertex<Double>> potentialStarts = new ArrayList<>();
-			ArrayList<Vertex<Double>> potentialGoals = new ArrayList<>();
-			int i = 0;
-			boolean switchUp = true;
-			for(Vertex<Double> node : vertices) {
-				if(switchUp) {
-					startChoices.getItems().add(((EskomInfrastructureEntity<Double>)node).getInfrastructureName());
-					((EskomInfrastructureEntity<Double>)node).Index = i;
-					potentialStarts.add(node);
-					i++;
-					switchUp =false;
-				}else{
-					goalChoices.getItems().add(((EskomInfrastructureEntity<Double>)node).getInfrastructureName());
-					((EskomInfrastructureEntity<Double>)node).Index = i;
-					potentialStarts.add(node);
-					i++;
-					switchUp = true;
-				}
-			}
-			
-			choiceBoxes.getChildren().addAll(startChoices,goalChoices);
-			
-			tepBox.getChildren().add(choiceBoxes);
-		});
+		pathFinding(findBTN,tepBox);
 		
 		/*
-		EskomInfrastructureEntity<Double> from = new EskomInfrastructureEntity<>("Some name"," Sometype",103221D);
-		EskomInfrastructureEntity<Double> to = new EskomInfrastructureEntity<>("Some name"," Sometype",103221D);
-		GraphInteractions.asstablishPathToFrom(from, to, 121); */
+		
+		//GraphInteractions.asstablishPathToFrom(from, to, 121); 
 		ArrayList<Vertex<Double>> pathTaken = GraphInteractions.DijkstrasAlgorithm(((EskomInfrastructureEntity<Double>) GraphInteractions.getGraph().getVertices().get(0)), 
 											((EskomInfrastructureEntity<Double>) GraphInteractions.getGraph().getVertices().get(5)));
 				
 		print(null,pathTaken);
 		
 		GraphInteractions.printGraph();
-		
+		*/
 		this.getChildren().addAll(mainHBox);
 	}
 	
+	private void pathFinding(Button findBTN, VBox tepBox) {
+		findBTN.setOnAction(e -> {
+			
+			HBox choiceBoxes = new HBox(10);
+			ChoiceBox<String> startChoices = new ChoiceBox<>();					
+			ChoiceBox<String> goalChoices = new ChoiceBox<>();		
+			Button Search = new Button("Search");
+
+			//get all the graphs vertices(EskomInfrastructureEntity)
+			List<Vertex<Double>> vertices = GraphInteractions.getGraph().getVertices();
+			
+			ArrayList<Vertex<Double>> potentialStarts = new ArrayList<>();
+			ArrayList<Vertex<Double>> potentialGoals = new ArrayList<>();
+			
+			int i = 0;
+			boolean switchUp = true;
+			for(Vertex<Double> node : vertices) {
+				if(((EskomInfrastructureEntity<Double>)node).getInfrastructuterType().equals("HQ")) {
+					startChoices.getItems().add(((EskomInfrastructureEntity<Double>)node).getInfrastructureName());
+					((EskomInfrastructureEntity<Double>)node).Index = i;
+					potentialStarts.add(node);
+					pathVertices.add(((EskomInfrastructureEntity<Double>)node).getInfrastructureName());
+					i++;
+					switchUp =false;
+				}else{
+					goalChoices.getItems().add(((EskomInfrastructureEntity<Double>)node).getInfrastructureName());
+					((EskomInfrastructureEntity<Double>)node).Index = i;
+					potentialStarts.add(node);
+					pathVertices.add(((EskomInfrastructureEntity<Double>)node).getInfrastructureName());
+					i++;
+					switchUp = true;
+				}
+			}
+			
+			//commence path finding
+			Search.setOnAction(searchAction->{
+				//get the celected vertices
+				
+				//Get the selected nodes respective indices		
+				if(startChoices.getValue() != null && goalChoices.getValue() != null) {
+					
+					
+					ArrayList<Vertex<Double>> pathTaken = GraphInteractions.DijkstrasAlgorithm(((EskomInfrastructureEntity<Double>) GraphInteractions.getVertexByName(startChoices.getValue())), 
+							((EskomInfrastructureEntity<Double>) GraphInteractions.getVertexByName(goalChoices.getValue())));
+					print(null,pathTaken);
+					try {
+						
+					}catch (NullPointerException exNull) {
+						Alert a = new Alert(AlertType.ERROR);
+				        a.setContentText("There is no link between the facilities");
+				        a.show();
+					}
+					
+				}else{
+					Alert a = new Alert(AlertType.ERROR);
+			        a.setContentText("Please schoose start and goal for traversal");
+			        a.show();
+				}
+				
+			});
+						
+			if(!alreadyaddedForPathFinding) {
+				choiceBoxes.getChildren().addAll(startChoices,goalChoices);
+				
+				tepBox.getChildren().addAll(choiceBoxes,Search);
+				alreadyaddedForPathFinding = true;
+			}
+			
+		});
+		
+	}
+
+	private void connectaction(Button establishLinkVertexBTN, VBox connectFacility) {
+			establishLinkVertexBTN .setOnAction(e -> {
+			
+			HBox choiceBoxes = new HBox(10);
+			ChoiceBox<String> startChoices = new ChoiceBox<>();					
+			ChoiceBox<String> goalChoices = new ChoiceBox<>();		
+			Label distanceLbl = new Label("Distance");
+			TextField distanceTXTFld = new TextField();
+			Button connect = new Button("connect");
+			
+			
+			//get all the graphs vertices(EskomInfrastructureEntity)
+			List<Vertex<Double>> vertices = GraphInteractions.getGraph().getVertices();
+			
+			ArrayList<Vertex<Double>> potentialStarts = new ArrayList<>();
+			ArrayList<Vertex<Double>> potentialGoals = new ArrayList<>();
+			
+			int i = 0;
+			boolean switchUp = true;
+			for(Vertex<Double> node : vertices) {
+					startChoices.getItems().add(((EskomInfrastructureEntity<Double>)node).getInfrastructureName());
+					((EskomInfrastructureEntity<Double>)node).Index = i;
+					potentialStarts.add(node);
+					pathVertices.add(((EskomInfrastructureEntity<Double>)node).getInfrastructureName());				
+				
+					goalChoices.getItems().add(((EskomInfrastructureEntity<Double>)node).getInfrastructureName());
+					i++;
+					((EskomInfrastructureEntity<Double>)node).Index = i;
+					potentialStarts.add(node);
+					pathVertices.add(((EskomInfrastructureEntity<Double>)node).getInfrastructureName());
+				
+			}
+			
+			//commence path finding
+			connect.setOnAction(searchAction->{
+				//get the celected vertices
+				
+				//Get the selected nodes respective indices		
+				try//value
+				{
+				
+					//get the 
+					int cost = Integer.parseInt((distanceTXTFld.getText()));
+					
+					if(startChoices.getValue() != null && goalChoices.getValue() != null ) {
+						//establish the path
+						GraphInteractions.asstablishPathToFrom((((EskomInfrastructureEntity<Double>) GraphInteractions.getVertexByName(startChoices.getValue()))), 
+								((EskomInfrastructureEntity<Double>) GraphInteractions.getVertexByName(goalChoices.getValue())),cost);
+						
+						// create an Confirmation alert 
+				        Alert a = new Alert(AlertType.CONFIRMATION);
+				        a.setContentText("Facilities hav been linked");
+				        a.show();
+					}else{
+						Alert a = new Alert(AlertType.ERROR);
+				        a.setContentText("Please choose start and goal for traversal");
+				        a.show();
+					}
+				}		
+				catch(Exception exception) 
+				{
+					// create an error alert 
+			        Alert a = new Alert(AlertType.ERROR);
+			        a.setContentText("please enter the distance");
+			        a.show();
+			     
+				}finally {
+					stationCapacity = 0.0;
+				}				
+				
+			});
+						
+			if(!alreadyaddedForConnecting) {
+				choiceBoxes.getChildren().addAll(startChoices,goalChoices);
+				
+				connectFacility.getChildren().addAll(choiceBoxes,distanceLbl,distanceTXTFld,connect);
+				alreadyaddedForConnecting = true;
+			}
+
+		});
+
+		
+	}
+
 	/**
-	 * 
 	 * @param verticesToRemove
 	 * @param pathTaken
 	 */
-	public void print(ChoiceBox<String> verticesToRemove, ArrayList<Vertex<Double>> pathTaken) {
+	public void print(ChoiceBox<String> verticesToRemove, List<Vertex<Double>> pathTaken) {
 		
 		for(Vertex<Double> EskomInfrastructure : this.GraphInteractions.getGraph().getVertices()) {
 			System.out.println(((EskomInfrastructureEntity<Double>)EskomInfrastructure).toString());
 		}
 		//print the path
 		if(pathTaken != null) {
-			textArea.clear();
+			textArea.setText("");
 			for(Vertex<Double> node : pathTaken) {				
 				textArea.appendText(((EskomInfrastructureEntity<Double>) node).toString());
 			}

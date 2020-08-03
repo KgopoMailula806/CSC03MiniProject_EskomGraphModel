@@ -21,8 +21,8 @@ public class AppExecution extends Application{
 	@Override
 	public void start(Stage stage) throws Exception {
 		
-		/**/ DisplayPane layout = new DisplayPane(900,700);
-		Scene scene = new Scene(layout,900,700);
+		/**/ DisplayPane layout = new DisplayPane(900,800);
+		Scene scene = new Scene(layout,900,800);
 		stage.setTitle("E-PathFinder");
 		stage.setScene(scene);
 		stage.show();
